@@ -8,12 +8,35 @@ dotenv.config({ path: new URL("../.env", import.meta.url) });
 
 const app = express();
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://questify-p7uh.vercel.app"
+];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN || "http://localhost:5173"
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+      
+      const isAllowed = allowedOrigins.includes(origin) || 
+                        origin.endsWith(".vercel.app") ||
+                        (process.env.CLIENT_ORIGIN && origin === process.env.CLIENT_ORIGIN) ||
+                        /^http:\/\/localhost:\d+$/.test(origin);
+                        
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    }
   })
 );
 app.use(express.json());
+
+app.get("/", (_req, res) => {
+  res.json({ status: "ok", message: "Questify API is running" });
+});
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
